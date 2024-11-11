@@ -8,6 +8,7 @@
 #include "abstract_device.h"
 #include <string>
 #include <vector>
+#include <deque>
 #include <unordered_map>
 #include <map>
 #include <cassert>
@@ -272,6 +273,15 @@ static int cto(reg_t val)
   return res;
 }
 
+enum STG
+{ // stage
+  IF = 0,
+  ID,
+  EX,
+  MEM,
+  WB
+};
+
 // this class represents one processor in a RISC-V machine.
 class processor_t : public abstract_device_t
 {
@@ -460,6 +470,7 @@ private:
   mmu_t* mmu; // main memory is always accessed via the mmu
   std::unordered_map<std::string, extension_t*> custom_extensions;
   disassembler_t* disassembler;
+  std::deque<insn_t> stage; // 5-stage pipeline insn storage
   state_t state;
   uint32_t id;
   unsigned max_xlen;
