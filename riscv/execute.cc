@@ -272,10 +272,19 @@ void processor_t::step(size_t n)
           state.single_step = state.STEP_STEPPED;
         }
 
+        /* Exit main function */
+        if (pc == 0x000000000001017C)
+          main_inside = false;
+
         insn_fetch_t fetch = mmu->load_insn(pc); // pc 주소의 instruction 가져오기
         if (debug && !state.serialized)
           disasm(fetch.insn); // -l 옵션 사용 시
         pc = execute_insn(this, pc, fetch); // instruction 실행
+
+        /* Jump to main function */
+        if (pc == 0x0000000000010178)
+          main_inside = true;
+
         advance_pc();
       }
     }

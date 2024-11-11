@@ -470,7 +470,12 @@ private:
   mmu_t* mmu; // main memory is always accessed via the mmu
   std::unordered_map<std::string, extension_t*> custom_extensions;
   disassembler_t* disassembler;
+
+  /* SPIKE Modification */
+  bool main_inside = false; // check insn in main function
   std::deque<insn_t> stage; // 5-stage pipeline insn storage
+  /* ------------------ */
+
   state_t state;
   uint32_t id;
   unsigned max_xlen;
