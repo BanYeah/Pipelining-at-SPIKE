@@ -275,15 +275,28 @@ void processor_t::step(size_t n)
         /* Exit main function */
         if (pc == 0x000000000001017C)
           main_inside = false;
+        /* ------------------ */
 
         insn_fetch_t fetch = mmu->load_insn(pc); // pc 주소의 instruction 가져오기
         if (debug && !state.serialized)
           disasm(fetch.insn); // -l 옵션 사용 시
-        pc = execute_insn(this, pc, fetch); // instruction 실행
+
+        insn_t insn = fetch.insn;
+        insn_bits_t insn_bits = fetch.insn.bits();
+        insn_bits_t opcode = insn_bits & 0x7f; // 0x7f = 0b01111111
+        /* Detech ecall and m/sret */
+        if (insn_bits == 0x00000073) // ecall
+          ecall_inside++;
+        else if (insn_bits == 0x10200073 || insn_bits == 0x30200073) // sret || mret
+          ecall_inside--;
+        /* ----------------------- */
+
+          pc = execute_insn(this, pc, fetch); // instruction 실행
 
         /* Jump to main function */
         if (pc == 0x0000000000010178)
           main_inside = true;
+        /* --------------------- */
 
         advance_pc();
       }
