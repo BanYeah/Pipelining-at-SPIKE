@@ -474,6 +474,7 @@ private:
   /* SPIKE Modification */
   bool main_inside = false; // check insn in main function
   int ecall_inside = 0;
+  bool page_fault = false; // check page fault
   std::deque<insn_t> stage; // 5-stage pipeline insn storage
   /* ------------------ */
 

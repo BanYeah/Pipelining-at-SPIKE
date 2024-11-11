@@ -3,6 +3,7 @@
 #include "processor.h"
 #include "mmu.h"
 #include "disasm.h"
+#include <cstring>
 #include <cassert>
 
 #ifdef RISCV_ENABLE_COMMITLOG
@@ -285,8 +286,10 @@ void processor_t::step(size_t n)
         insn_bits_t insn_bits = fetch.insn.bits();
         insn_bits_t opcode = insn_bits & 0x7f; // 0x7f = 0b01111111
         /* Detech ecall and m/sret */
-        if (insn_bits == 0x00000073) // ecall
+        if (insn_bits == 0x00000073) { // ecall
           ecall_inside++;
+          stage.push_back(insn_t(0x00000013)) // nop
+        }
         else if (insn_bits == 0x10200073 || insn_bits == 0x30200073) // sret || mret
           ecall_inside--;
         /* ----------------------- */
@@ -303,6 +306,13 @@ void processor_t::step(size_t n)
     }
     catch(trap_t& t) // page fault 발생
     {
+      /* Detect ecall and page fault */
+      if (ecall_inside == 0 && strstr(t.name(), "page_fault") != nullptr) // page fault
+        page_fault = true;
+      else if (strcmp(t.name(), "trap_user_ecall") != 0) // not ecall
+        ecall_inside++;
+      /* --------------------------- */
+
       take_trap(t, pc);
       n = instret;
 
