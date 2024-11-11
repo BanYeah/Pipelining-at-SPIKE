@@ -256,46 +256,26 @@ void processor_t::step(size_t n)
     {
       take_pending_interrupt();
 
-      if (unlikely(slow_path())) // -l 옵션 사용 시
+      // Main simulation loop, slow path.
+      while (instret < n)
       {
-        // Main simulation loop, slow path.
-        while (instret < n)
-        {
-          if (unlikely(!state.serialized && state.single_step == state.STEP_STEPPED)) {
-            state.single_step = state.STEP_NONE;
-            if (!state.debug_mode) {
-              enter_debug_mode(DCSR_CAUSE_STEP);
-              // enter_debug_mode changed state.pc, so we can't just continue.
-              break;
-            }
-          }
-
-          if (unlikely(state.single_step == state.STEP_STEPPING)) {
-            state.single_step = state.STEP_STEPPED;
-          }
-
-          insn_fetch_t fetch = mmu->load_insn(pc); // pc 주소의 instruction 가져오기
-          if (debug && !state.serialized)
-            disasm(fetch.insn); // -l 옵션 사용 시
-          pc = execute_insn(this, pc, fetch); // instruction 실행
-          advance_pc();
-        }
-      }
-      else while (instret < n)
-      {
-        // Main simulation loop, fast path.
-        for (auto ic_entry = _mmu->access_icache(pc); ; ) {
-          auto fetch = ic_entry->data;
-          pc = execute_insn(this, pc, fetch); // instruction 실행
-          ic_entry = ic_entry->next;
-          if (unlikely(ic_entry->tag != pc))
+        if (unlikely(!state.serialized && state.single_step == state.STEP_STEPPED)) {
+          state.single_step = state.STEP_NONE;
+          if (!state.debug_mode) {
+            enter_debug_mode(DCSR_CAUSE_STEP);
+            // enter_debug_mode changed state.pc, so we can't just continue.
             break;
-          if (unlikely(instret + 1 == n))
-            break;
-          instret++;
-          state.pc = pc;
+          }
         }
 
+        if (unlikely(state.single_step == state.STEP_STEPPING)) {
+          state.single_step = state.STEP_STEPPED;
+        }
+
+        insn_fetch_t fetch = mmu->load_insn(pc); // pc 주소의 instruction 가져오기
+        if (debug && !state.serialized)
+          disasm(fetch.insn); // -l 옵션 사용 시
+        pc = execute_insn(this, pc, fetch); // instruction 실행
         advance_pc();
       }
     }
