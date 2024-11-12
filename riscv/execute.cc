@@ -336,6 +336,7 @@ void processor_t::step(size_t n, long long* p_cycle)
 
         else if (t.cause() == 13 || t.cause() == 15) { // page fault by L/S
           std::cerr << "Page Fault >>" << "\033[0m" << std::endl; // for debugging
+          if (trap_inside == 1)
           page_fault = true;
         }
 
