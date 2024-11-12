@@ -3,6 +3,7 @@
 #include "processor.h"
 #include "mmu.h"
 #include "disasm.h"
+#include <iomanip>
 #include <cstring>
 #include <cassert>
 
@@ -277,25 +278,40 @@ void processor_t::step(size_t n)
         if (pc == 0x000000000001017C) {
           std::cerr << "\033[33m" << "Exit main!!" << "\033[0m" << std::endl;
           main_inside = false;
+        }
         /* ------------------ */
 
         insn_fetch_t fetch = mmu->load_insn(pc); // pc 주소의 instruction 가져오기
         if (debug && !state.serialized)
           disasm(fetch.insn); // -l 옵션 사용 시
 
+        /* Fetch Insn */
         insn_t insn = fetch.insn;
         insn_bits_t insn_bits = fetch.insn.bits();
         insn_bits_t opcode = insn_bits & 0x7f; // 0x7f = 0b01111111
-        /* Detech ecall and m/sret */
-        if (insn_bits == 0x00000073) { // ecall
-          ecall_inside++;
-          stage.push_back(insn_t(0x00000013)) // nop
-        }
-        else if (insn_bits == 0x10200073 || insn_bits == 0x30200073) // sret || mret
-          ecall_inside--;
-        /* ----------------------- */
+        if (main_inside && !trap_inside)
+          std::cerr << "0x" << std::setw(8) << std::setfill('0') << std::hex << insn_bits << std::endl; // for debugging
+        /* ---------- */
 
-          pc = execute_insn(this, pc, fetch); // instruction 실행
+        pc = execute_insn(this, pc, fetch); // instruction 실행
+
+        if (main_inside) {
+          /* Calculate Pipeline Cycle */
+          if (trap_inside == 0 && !page_fault) {
+          }
+          else if (trap_inside == 0 && page_fault) { // handle instruction duplicate
+            std::cerr << "\033[32m" << "Insn dup" << "\033[0m" << std::endl;
+            page_fault = false;
+          }
+          /* ------------------------ */
+
+          /* Detech sret || mret */
+          if (insn_bits == 0x10200073 || insn_bits == 0x30200073) {
+            std::cerr << "\033[32m" << "sret / mret" << "\033[0m" << std::endl;
+            trap_inside--;
+          }
+          /* ------------------- */
+        }
 
         /* Jump to main function */
         if (pc == 0x0000000000010178) {
@@ -307,14 +323,25 @@ void processor_t::step(size_t n)
         advance_pc();
       }
     }
-    catch(trap_t& t) // page fault 발생
+    catch(trap_t& t) // trap 발생
     {
-      /* Detect ecall and page fault */
-      if (ecall_inside == 0 && strstr(t.name(), "page_fault") != nullptr) // page fault
-        page_fault = true;
-      else if (strcmp(t.name(), "trap_user_ecall") != 0) // not ecall
-        ecall_inside++;
-      /* --------------------------- */
+      if (main_inside) {
+        std::cerr << "\033[31m" << "<< Trap: "; // for debugging
+        trap_inside++;
+
+        /* Detect ecall and page fault */
+        if (t.cause() == 8) // user mode ecall
+          std::cerr << "ecall >>" << "\033[0m" << std::endl;    // for debugging
+
+        else if (t.cause() == 13 || t.cause() == 15) { // page fault by L/S
+          std::cerr << "Page Fault >>" << "\033[0m" << std::endl; // for debugging
+          page_fault = true;
+        }
+
+        else
+          std::cerr << ">>" << "\033[0m" << std::endl;
+        /* --------------------------- */
+      }
 
       take_trap(t, pc);
       n = instret;
