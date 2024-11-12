@@ -297,15 +297,15 @@ void processor_t::step(size_t n)
 
         if (main_inside) {
           /* Calculate Pipeline Cycle */
-          if (trap_inside == 0 && !page_fault) {
+          if (!trap_inside && !page_fault) {
           }
-          else if (trap_inside == 0 && page_fault) { // handle instruction duplicate
+          else if (!trap_inside && page_fault) { // handle instruction duplicate
             std::cerr << "\033[32m" << "Insn dup" << "\033[0m" << std::endl;
             page_fault = false;
           }
           /* ------------------------ */
 
-          /* Detech sret || mret */
+          /* Detect sret || mret */
           if (insn_bits == 0x10200073 || insn_bits == 0x30200073) {
             std::cerr << "\033[32m" << "sret / mret" << "\033[0m" << std::endl;
             trap_inside--;
