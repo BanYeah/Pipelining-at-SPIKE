@@ -477,7 +477,7 @@ int main(int argc, char** argv)
   auto return_code = s.run(); // simulator 실행
 
   /* Print Pipeline Cycle */
-  std::cout << p_cycle << std::endl;
+  std::cout << p_cycle + 4 << std::endl;
   /* -------------------- */
 
   for (auto& mem : mems)

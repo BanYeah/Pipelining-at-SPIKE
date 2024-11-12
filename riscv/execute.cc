@@ -286,11 +286,18 @@ void processor_t::step(size_t n, long long* p_cycle)
           disasm(fetch.insn); // -l 옵션 사용 시
 
         /* Fetch Insn */
+        reg_t prev_pc = pc;
         insn_t insn = fetch.insn;
         insn_bits_t insn_bits = fetch.insn.bits();
         insn_bits_t opcode = insn_bits & 0x7f; // 0x7f = 0b01111111
-        if (main_inside && !trap_inside)
-          std::cerr << "0x" << std::setw(8) << std::setfill('0') << std::hex << insn_bits << std::endl; // for debugging
+        insn_bits_t funct7 = (insn_bits >> 25) & 0x7f;
+        if (main_inside && !trap_inside) {
+          std::cerr
+              << "\033[90m"
+              << "(PC: " << "0x" << std::setw(16) << std::setfill('0') << std::hex << prev_pc << ") "
+              << "\033[0m"
+              << "0x" << std::setw(8) << std::setfill('0') << std::hex << insn_bits; // for debugging
+        }
         /* ---------- */
 
         pc = execute_insn(this, pc, fetch); // instruction 실행
@@ -298,10 +305,46 @@ void processor_t::step(size_t n, long long* p_cycle)
         if (main_inside) {
           /* Calculate Pipeline Cycle */
           if (!trap_inside && !page_fault) {
+            if (insn_buf.size() == 5)
+              insn_buf.pop_back();
+            insn_buf.push_front(insn);
+            
+            /* Check Pipeline Stall */
+            if ((opcode == 0b0110011 || opcode == 0b0111011) && funct7 != 1) { // R-type
+              std::cerr << ": R-type" << std::endl;
+            }
+            else if (opcode == 0b0010011 || opcode == 0b0011011) { // I-type(non-Load)
+              std::cerr << ": I-type" << std::endl;
+            }
+            else if (opcode == 0b0000011) { // I-type(Load)
+              std::cerr << ": I-type" << std::endl;
+            }
+            else if (opcode == 0b0100011) { // S-type
+              std::cerr << ": S-type" << std::endl;
+            }
+            else if (opcode == 0b1100011) { // B-type
+              std::cerr << ": B-type" << std::endl;
+            }
+            else if (opcode == 0b0110111 || opcode == 0b0010111) { // U-type
+              std::cerr << ": U-type" << std::endl;
+            }
+            else if (opcode == 0b1101111) { // JAL
+              std::cerr << ": JAL" << std::endl;
+            }
+            else if (opcode == 0b1100111) { // JALR
+              std::cerr << ": JALR" << std::endl;
+            }
+            else { // RV32I 또는 RV64I에 속하지 않음
+              std::cerr << ": nop" << std::endl;
+              insn_buf.pop_front();
+              insn_buf.push_front(0x00000013); // nop
+            }
+            /* -------------------- */
+
             (*p_cycle)++;
           }
           else if (!trap_inside && page_fault) { // handle instruction duplicate
-            std::cerr << "\033[32m" << "Insn dup" << "\033[0m" << std::endl;
+            std::cerr << "\033[32m" << ": Insn dup" << "\033[0m" << std::endl;
             page_fault = false;
           }
           /* ------------------------ */
@@ -327,7 +370,7 @@ void processor_t::step(size_t n, long long* p_cycle)
     catch(trap_t& t) // trap 발생
     {
       if (main_inside) {
-        std::cerr << "\033[31m" << "<< Trap: "; // for debugging
+        std::cerr << std::endl << "\033[31m" << "<< Trap: "; // for debugging
         trap_inside++;
 
         /* Detect ecall and page fault */
@@ -337,7 +380,7 @@ void processor_t::step(size_t n, long long* p_cycle)
         else if (t.cause() == 13 || t.cause() == 15) { // page fault by L/S
           std::cerr << "Page Fault >>" << "\033[0m" << std::endl; // for debugging
           if (trap_inside == 1)
-          page_fault = true;
+            page_fault = true;
         }
 
         else
