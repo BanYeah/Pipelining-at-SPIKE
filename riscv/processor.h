@@ -466,7 +466,7 @@ private:
   bool main_inside = false; // check insn in main function
   int trap_inside = 0;
   bool page_fault = false; // check page fault
-  std::deque<insn_t> stage; // 5-stage pipeline insn storage
+  std::deque<insn_t> insn_buf; // insn buffer
   /* ------------------ */
 
   state_t state;
