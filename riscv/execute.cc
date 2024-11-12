@@ -289,10 +289,8 @@ void processor_t::step(size_t n, long long* p_cycle)
         insn_t insn = fetch.insn;
         insn_bits_t insn_bits = fetch.insn.bits();
         insn_bits_t opcode = insn_bits & 0x7f; // 0x7f = 0b01111111
-        if (main_inside && !trap_inside) {
+        if (main_inside && !trap_inside)
           std::cerr << "0x" << std::setw(8) << std::setfill('0') << std::hex << insn_bits << std::endl; // for debugging
-          (*p_cycle)++;
-        }
         /* ---------- */
 
         pc = execute_insn(this, pc, fetch); // instruction 실행
@@ -300,6 +298,7 @@ void processor_t::step(size_t n, long long* p_cycle)
         if (main_inside) {
           /* Calculate Pipeline Cycle */
           if (!trap_inside && !page_fault) {
+            (*p_cycle)++;
           }
           else if (!trap_inside && page_fault) { // handle instruction duplicate
             std::cerr << "\033[32m" << "Insn dup" << "\033[0m" << std::endl;
