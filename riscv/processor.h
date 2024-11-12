@@ -273,14 +273,6 @@ static int cto(reg_t val)
   return res;
 }
 
-enum STG { // stage
-  IF = 0,
-  ID,
-  EX,
-  MEM,
-  WB
-};
-
 // this class represents one processor in a RISC-V machine.
 class processor_t : public abstract_device_t
 {
