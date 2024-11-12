@@ -274,7 +274,8 @@ void processor_t::step(size_t n)
         }
 
         /* Exit main function */
-        if (pc == 0x000000000001017C)
+        if (pc == 0x000000000001017C) {
+          std::cerr << "\033[33m" << "Exit main!!" << "\033[0m" << std::endl;
           main_inside = false;
         /* ------------------ */
 
@@ -297,8 +298,10 @@ void processor_t::step(size_t n)
           pc = execute_insn(this, pc, fetch); // instruction 실행
 
         /* Jump to main function */
-        if (pc == 0x0000000000010178)
+        if (pc == 0x0000000000010178) {
+          std::cerr << "\033[33m" << "Jump to main!!" << "\033[0m" << std::endl;
           main_inside = true;
+        }
         /* --------------------- */
 
         advance_pc();

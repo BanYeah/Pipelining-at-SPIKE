@@ -273,8 +273,7 @@ static int cto(reg_t val)
   return res;
 }
 
-enum STG
-{ // stage
+enum STG { // stage
   IF = 0,
   ID,
   EX,
