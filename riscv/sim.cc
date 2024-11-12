@@ -35,6 +35,7 @@ sim_t::sim_t(const char *isa, const char *priv, const char *varch,
              const std::vector<std::string> &args,
              std::vector<int> const hartids,
              const debug_module_config_t &dm_config,
+             long long *p_cycle,
              const char *log_path,
              bool dtb_enabled, const char *dtb_file,
 #ifdef HAVE_BOOST_ASIO
@@ -51,6 +52,7 @@ sim_t::sim_t(const char *isa, const char *priv, const char *varch,
       start_pc(start_pc),
       dtb_file(dtb_file ? dtb_file : ""),
       dtb_enabled(dtb_enabled),
+      p_cycle(p_cycle),
       log_file(log_path),
       cmd_file(cmd_file),
 #ifdef HAVE_BOOST_ASIO
@@ -204,7 +206,7 @@ void sim_t::step(size_t n)
   for (size_t i = 0, steps = 0; i < n; i += steps)
   { // n-i step 혹은 INTERLEAVE 도달 직전이라면 INTERLEAVE까지 남은 step을 실행
     steps = std::min(n - i, INTERLEAVE - current_step); // -l 옵션 미사용 시 INTERLEAVE 만큼, -l 옵션 사용 시 1만큼 실행
-    procs[current_proc]->step(steps);
+    procs[current_proc]->step(steps, p_cycle);
 
     current_step += steps;
     if (current_step == INTERLEAVE)

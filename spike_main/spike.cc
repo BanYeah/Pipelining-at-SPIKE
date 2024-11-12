@@ -433,10 +433,14 @@ int main(int argc, char** argv)
      }
   }
 #endif
+  /* Print Pipeline Cycle */
+  long long p_cycle = 0;
+  /* -------------------- */
+
   // simulator 생성
   sim_t s(isa, priv, varch, nprocs, halted, real_time_clint,
       initrd_start, initrd_end, bootargs, start_pc, mems, plugin_devices, htif_args,
-      std::move(hartids), dm_config, log_path, dtb_enabled, dtb_file,
+      std::move(hartids), dm_config, &p_cycle, log_path, dtb_enabled, dtb_file,
 #ifdef HAVE_BOOST_ASIO
       io_service_ptr, acceptor_ptr,
 #endif
@@ -471,6 +475,10 @@ int main(int argc, char** argv)
   s.set_histogram(histogram);
 
   auto return_code = s.run(); // simulator 실행
+
+  /* Print Pipeline Cycle */
+  std::cout << p_cycle << std::endl;
+  /* -------------------- */
 
   for (auto& mem : mems)
     delete mem.second;

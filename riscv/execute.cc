@@ -221,7 +221,7 @@ bool processor_t::slow_path()
 }
 
 // fetch/decode/execute loop
-void processor_t::step(size_t n)
+void processor_t::step(size_t n, long long* p_cycle)
 {
   if (!state.debug_mode) {
     if (halt_request == HR_REGULAR) {
@@ -289,8 +289,10 @@ void processor_t::step(size_t n)
         insn_t insn = fetch.insn;
         insn_bits_t insn_bits = fetch.insn.bits();
         insn_bits_t opcode = insn_bits & 0x7f; // 0x7f = 0b01111111
-        if (main_inside && !trap_inside)
+        if (main_inside && !trap_inside) {
           std::cerr << "0x" << std::setw(8) << std::setfill('0') << std::hex << insn_bits << std::endl; // for debugging
+          (*p_cycle)++;
+        }
         /* ---------- */
 
         pc = execute_insn(this, pc, fetch); // instruction 실행

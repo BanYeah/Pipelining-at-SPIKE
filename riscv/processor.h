@@ -297,7 +297,7 @@ public:
   bool get_log_commits_enabled() const { return log_commits_enabled; }
 #endif
   void reset();
-  void step(size_t n); // run for n cycles
+  void step(size_t n, long long* p_cycle); // run for n cycles
   void set_csr(int which, reg_t val);
   uint32_t get_id() const { return id; }
   reg_t get_csr(int which, insn_t insn, bool write, bool peek = 0);
