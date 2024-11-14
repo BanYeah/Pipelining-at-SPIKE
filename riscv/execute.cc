@@ -6,6 +6,7 @@
 #include <iomanip>
 #include <cstring>
 #include <cassert>
+#include <functional>
 
 #ifdef RISCV_ENABLE_COMMITLOG
 static void commit_log_reset(processor_t* p)
@@ -286,15 +287,15 @@ void processor_t::step(size_t n, long long* p_cycle)
           disasm(fetch.insn); // -l 옵션 사용 시
 
         /* Fetch Insn */
-        reg_t prev_pc = pc;
+        reg_t insn_pc = pc;
         insn_t insn = fetch.insn;
-        insn_bits_t insn_bits = fetch.insn.bits();
+        insn_bits_t insn_bits = insn.bits();
         insn_bits_t opcode = insn_bits & 0x7f; // 0x7f = 0b01111111
         insn_bits_t funct7 = (insn_bits >> 25) & 0x7f;
         if (main_inside && !trap_inside) {
           std::cerr
               << "\033[90m"
-              << "(PC: " << "0x" << std::setw(16) << std::setfill('0') << std::hex << prev_pc << ") "
+              << "(PC: " << "0x" << std::setw(16) << std::setfill('0') << std::hex << insn_pc << ") "
               << "\033[0m"
               << "0x" << std::setw(8) << std::setfill('0') << std::hex << insn_bits; // for debugging
         }
@@ -302,10 +303,18 @@ void processor_t::step(size_t n, long long* p_cycle)
 
         pc = execute_insn(this, pc, fetch); // instruction 실행
 
+        /* Push Nop lamda function */
+        auto pushNop = [this](size_t idx = 0) {
+          if (insn_buf.size() >= 5)
+            insn_buf.pop_back();
+          insn_buf.insert(insn_buf.begin() + idx, 0x00000013);
+        };
+        /* ----------------------- */
+
         if (main_inside) {
           /* Calculate Pipeline Cycle */
           if (!trap_inside && !page_fault) {
-            if (insn_buf.size() == 5)
+            if (insn_buf.size() >= 5)
               insn_buf.pop_back();
             insn_buf.push_front(insn);
             
