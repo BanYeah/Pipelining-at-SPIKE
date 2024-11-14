@@ -277,7 +277,7 @@ void processor_t::step(size_t n, long long* p_cycle)
 
         /* Exit main function */
         if (pc == 0x000000000001017C) {
-          std::cerr << "\033[33m" << "Exit main!!" << "\033[0m" << std::endl;
+          // std::cerr << "\033[33m" << "Exit main!!" << "\033[0m" << std::endl;
           main_inside = false;
         }
         /* ------------------ */
@@ -292,13 +292,13 @@ void processor_t::step(size_t n, long long* p_cycle)
         insn_bits_t insn_bits = insn.bits();
         insn_bits_t opcode = insn_bits & 0x7f; // 0x7f = 0b01111111
         insn_bits_t funct7 = (insn_bits >> 25) & 0x7f;
-        if (main_inside && !trap_inside) {
-          std::cerr
-              << "\033[90m"
-              << "(PC: " << "0x" << std::setw(16) << std::setfill('0') << std::hex << insn_pc << ") "
-              << "\033[0m"
-              << "0x" << std::setw(8) << std::setfill('0') << std::hex << insn_bits; // for debugging
-        }
+        // if (main_inside && !trap_inside) {
+        //   std::cerr
+        //       << "\033[90m"
+        //       << "(PC: " << "0x" << std::setw(16) << std::setfill('0') << std::hex << insn_pc << ") "
+        //       << "\033[0m"
+        //       << "0x" << std::setw(8) << std::setfill('0') << std::hex << insn_bits; // for debugging
+        // }
         /* ---------- */
 
         pc = execute_insn(this, pc, fetch); // instruction 실행
@@ -320,7 +320,6 @@ void processor_t::step(size_t n, long long* p_cycle)
 
             /* Check Pipeline Stall */
             if ((opcode == 0b0110011 || opcode == 0b0111011) && funct7 != 1) { // R-type
-              std::cerr << ": R-type" << std::endl;
               // Assume that insn in a EX stage
               uint64_t rs1 = insn.rs1();
               uint64_t rs2 = insn.rs2();
@@ -336,7 +335,6 @@ void processor_t::step(size_t n, long long* p_cycle)
               }
             }
             else if (opcode == 0b0010011 || opcode == 0b0011011 || opcode == 0b0000011) { // I-type
-              std::cerr << ": I-type" << std::endl;
               // Assume that insn in a EX stage
               uint64_t rs1 = insn.rs1();
 
@@ -351,7 +349,6 @@ void processor_t::step(size_t n, long long* p_cycle)
               }
             }
             else if (opcode == 0b0100011) { // S-type
-              std::cerr << ": S-type" << std::endl;
               // Assume that insn in a EX stage
               uint64_t rs1 = insn.rs1();
 
@@ -366,7 +363,6 @@ void processor_t::step(size_t n, long long* p_cycle)
               }
             }
             else if (opcode == 0b1100011) { // B-type
-              std::cerr << ": B-type" << std::endl;
               // Assume that insn in a ID stage
               uint64_t rs1 = insn.rs1();
               uint64_t rs2 = insn.rs2();
@@ -405,15 +401,12 @@ void processor_t::step(size_t n, long long* p_cycle)
               }
             }
             else if (opcode == 0b0110111 || opcode == 0b0010111) { // U-type
-              std::cerr << ": U-type" << std::endl;
             }
             else if (opcode == 0b1101111) { // JAL
-              std::cerr << ": JAL" << std::endl;
               pushNop(); // bubble
               (*p_cycle)++;
             }
             else if (opcode == 0b1100111) { // JALR
-              std::cerr << ": JALR" << std::endl;
               // Assume that insn in a ID stage
               uint64_t rs1 = insn.rs1();
 
@@ -449,7 +442,6 @@ void processor_t::step(size_t n, long long* p_cycle)
               (*p_cycle)++;
             }
             else { // RV32I 또는 RV64I에 속하지 않음
-              std::cerr << ": nop" << std::endl;
               insn_buf.pop_front();
               insn_buf.push_front(0x00000013); // nop
             }
@@ -458,14 +450,14 @@ void processor_t::step(size_t n, long long* p_cycle)
             (*p_cycle)++;
           }
           else if (!trap_inside && page_fault) { // handle instruction duplicate
-            std::cerr << "\033[32m" << ": Insn dup" << "\033[0m" << std::endl;
+            // std::cerr << "\033[32m" << ": Insn dup" << "\033[0m" << std::endl;
             page_fault = false;
           }
           /* ------------------------ */
 
           /* Detect sret || mret */
           if (insn_bits == 0x10200073 || insn_bits == 0x30200073) {
-            std::cerr << "\033[32m" << "sret / mret" << "\033[0m" << std::endl;
+            // std::cerr << "\033[32m" << "sret / mret" << "\033[0m" << std::endl;
             trap_inside--;
           }
           /* ------------------- */
@@ -473,7 +465,7 @@ void processor_t::step(size_t n, long long* p_cycle)
 
         /* Jump to main function */
         if (pc == 0x0000000000010178) {
-          std::cerr << "\033[33m" << "Jump to main!!" << "\033[0m" << std::endl;
+          // std::cerr << "\033[33m" << "Jump to main!!" << "\033[0m" << std::endl;
           main_inside = true;
         }
         /* --------------------- */
@@ -484,21 +476,21 @@ void processor_t::step(size_t n, long long* p_cycle)
     catch(trap_t& t) // trap 발생
     {
       if (main_inside) {
-        std::cerr << std::endl << "\033[31m" << "<< Trap: "; // for debugging
+        // std::cerr << std::endl << "\033[31m" << "<< Trap: "; // for debugging
         trap_inside++;
 
         /* Detect ecall and page fault */
-        if (t.cause() == 8) // user mode ecall
-          std::cerr << "ecall >>" << "\033[0m" << std::endl;    // for debugging
+        // if (t.cause() == 8) // user mode ecall
+          // std::cerr << "ecall >>" << "\033[0m" << std::endl;    // for debugging
 
-        else if (t.cause() == 13 || t.cause() == 15) { // page fault by L/S
-          std::cerr << "Page Fault >>" << "\033[0m" << std::endl; // for debugging
+        if (t.cause() == 13 || t.cause() == 15) { // page fault by L/S
+          // std::cerr << "Page Fault >>" << "\033[0m" << std::endl; // for debugging
           if (trap_inside == 1)
             page_fault = true;
         }
 
-        else
-          std::cerr << ">>" << "\033[0m" << std::endl;
+        // else
+        //   std::cerr << ">>" << "\033[0m" << std::endl;
         /* --------------------------- */
       }
 
