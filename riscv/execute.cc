@@ -317,31 +317,136 @@ void processor_t::step(size_t n, long long* p_cycle)
             if (insn_buf.size() >= 5)
               insn_buf.pop_back();
             insn_buf.push_front(insn);
-            
+
             /* Check Pipeline Stall */
             if ((opcode == 0b0110011 || opcode == 0b0111011) && funct7 != 1) { // R-type
               std::cerr << ": R-type" << std::endl;
+              // Assume that insn in a EX stage
+              uint64_t rs1 = insn.rs1();
+              uint64_t rs2 = insn.rs2();
+
+              // Get rd register of an insn in a MEM stage
+              if (insn_buf.size() >= 2) {
+                insn_bits_t opcode_MEM = insn_buf[1].bits() & 0x7f;
+                uint64_t rd = insn_buf[1].rd();
+                if (opcode_MEM == 0b0000011 && rd != 0 && (rd == rs1 || rd == rs2)) { // check load
+                  pushNop(1); // bubble
+                  (*p_cycle)++;
+                }
+              }
             }
-            else if (opcode == 0b0010011 || opcode == 0b0011011) { // I-type(non-Load)
+            else if (opcode == 0b0010011 || opcode == 0b0011011 || opcode == 0b0000011) { // I-type
               std::cerr << ": I-type" << std::endl;
-            }
-            else if (opcode == 0b0000011) { // I-type(Load)
-              std::cerr << ": I-type" << std::endl;
+              // Assume that insn in a EX stage
+              uint64_t rs1 = insn.rs1();
+
+              // Get rd register of an insn in a MEM stage
+              if (insn_buf.size() >= 2) {
+                insn_bits_t opcode_MEM = insn_buf[1].bits() & 0x7f;
+                uint64_t rd = insn_buf[1].rd();
+                if (opcode_MEM == 0b0000011 && rd != 0 && rd == rs1) { // check load
+                  pushNop(1); // bubble
+                  (*p_cycle)++;
+                }
+              }
             }
             else if (opcode == 0b0100011) { // S-type
               std::cerr << ": S-type" << std::endl;
+              // Assume that insn in a EX stage
+              uint64_t rs1 = insn.rs1();
+
+              // Get rd register of an insn in a MEM stage
+              if (insn_buf.size() >= 2) {
+                insn_bits_t opcode_MEM = insn_buf[1].bits() & 0x7f;
+                uint64_t rd = insn_buf[1].rd();
+                if (opcode_MEM == 0b0000011 && rd != 0 && rd == rs1) { // check load
+                  pushNop(1); // bubble
+                  (*p_cycle)++;
+                }
+              }
             }
             else if (opcode == 0b1100011) { // B-type
               std::cerr << ": B-type" << std::endl;
+              // Assume that insn in a ID stage
+              uint64_t rs1 = insn.rs1();
+              uint64_t rs2 = insn.rs2();
+
+              // Get rd register of an insn in a EX stage
+              if (insn_buf.size() >= 2) {
+                insn_bits_t opcode_EX = insn_buf[1].bits() & 0x7f;
+                uint64_t rd = insn_buf[1].rd();
+                if ((((opcode_EX == 0b0110011 || opcode_EX == 0b0111011) && funct7 != 1) || // check R-type
+                    opcode_EX == 0b0010011 || opcode_EX == 0b0011011 || // check I-type(non-load)
+                    opcode_EX == 0b0110111 || opcode_EX == 0b0010111) && // check U-type
+                    rd != 0 && (rd == rs1 || rd == rs2)) {
+                  pushNop(1); // bubble
+                  (*p_cycle)++;
+                }
+                else if (opcode_EX == 0b0000011 && rd != 0 && (rd == rs1 || rd == rs2)) { // check load
+                  pushNop(1);
+                  pushNop(1); // bubble
+                  (*p_cycle) += 2;
+                }
+              }
+
+              // Get rd register of an insn in a MEM stage
+              if (insn_buf.size() >= 3) {
+                insn_bits_t opcode_MEM = insn_buf[2].bits() & 0x7f;
+                uint64_t rd = insn_buf[2].rd();
+                if (opcode_MEM == 0b0000011 && rd != 0 && (rd == rs1 || rd == rs2)) { // check load
+                  pushNop(1); // bubble
+                  (*p_cycle)++;
+                }
+              }
+
+              if (insn_pc + 4 != pc) { // branch taken
+                pushNop(); // bubble
+                (*p_cycle)++;
+              }
             }
             else if (opcode == 0b0110111 || opcode == 0b0010111) { // U-type
               std::cerr << ": U-type" << std::endl;
             }
             else if (opcode == 0b1101111) { // JAL
               std::cerr << ": JAL" << std::endl;
+              pushNop(); // bubble
+              (*p_cycle)++;
             }
             else if (opcode == 0b1100111) { // JALR
               std::cerr << ": JALR" << std::endl;
+              // Assume that insn in a ID stage
+              uint64_t rs1 = insn.rs1();
+
+              // Get rd register of an insn in a EX stage
+              if (insn_buf.size() >= 2) {
+                insn_bits_t opcode_EX = insn_buf[1].bits() & 0x7f;
+                uint64_t rd = insn_buf[1].rd();
+                if ((((opcode_EX == 0b0110011 || opcode_EX == 0b0111011) && funct7 != 1) || // check R-type
+                    opcode_EX == 0b0010011 || opcode_EX == 0b0011011 || // check I-type(non-load)
+                    opcode_EX == 0b0110111 || opcode_EX == 0b0010111) && // check U-type
+                    rd != 0 && rd == rs1) {
+                  pushNop(1); // bubble
+                  (*p_cycle)++;
+                }
+                else if (opcode_EX == 0b0000011 && rd != 0 && rd == rs1) { // check load
+                  pushNop(1);
+                  pushNop(1); // bubble
+                  (*p_cycle) += 2;
+                }
+              }
+
+              // Get rd register of an insn in a MEM stage
+              if (insn_buf.size() >= 3) {
+                insn_bits_t opcode_MEM = insn_buf[2].bits() & 0x7f;
+                uint64_t rd = insn_buf[2].rd();
+                if (opcode_MEM == 0b0000011 && rd != 0 && rd == rs1) { // check load
+                  pushNop(1); // bubble
+                  (*p_cycle)++;
+                }
+              }
+
+              pushNop(); // bubble
+              (*p_cycle)++;
             }
             else { // RV32I 또는 RV64I에 속하지 않음
               std::cerr << ": nop" << std::endl;
