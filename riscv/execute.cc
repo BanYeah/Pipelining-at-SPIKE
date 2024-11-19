@@ -276,10 +276,8 @@ void processor_t::step(size_t n, long long* p_cycle)
         }
 
         /* Exit main function */
-        if (pc == 0x000000000001017C) {
-          // std::cerr << "\033[33m" << "Exit main!!" << "\033[0m" << std::endl;
+        if (pc == 0x000000000001017C)
           main_inside = false;
-        }
         /* ------------------ */
 
         insn_fetch_t fetch = mmu->load_insn(pc); // pc 주소의 instruction 가져오기
@@ -292,18 +290,11 @@ void processor_t::step(size_t n, long long* p_cycle)
         insn_bits_t insn_bits = insn.bits();
         insn_bits_t opcode = insn_bits & 0x7f; // 0x7f = 0b01111111
         insn_bits_t funct7 = (insn_bits >> 25) & 0x7f;
-        // if (main_inside && !trap_inside) {
-        //   std::cerr
-        //       << "\033[90m"
-        //       << "(PC: " << "0x" << std::setw(16) << std::setfill('0') << std::hex << insn_pc << ") "
-        //       << "\033[0m"
-        //       << "0x" << std::setw(8) << std::setfill('0') << std::hex << insn_bits; // for debugging
-        // }
         /* ---------- */
 
         pc = execute_insn(this, pc, fetch); // instruction 실행
 
-        /* Push Nop lamda function */
+        /* Push Nop lambda function */
         auto pushNop = [this](size_t idx = 0) {
           if (insn_buf.size() >= 5)
             insn_buf.pop_back();
@@ -449,25 +440,19 @@ void processor_t::step(size_t n, long long* p_cycle)
 
             (*p_cycle)++;
           }
-          else if (!trap_inside && page_fault) { // handle instruction duplicate
-            // std::cerr << "\033[32m" << ": Insn dup" << "\033[0m" << std::endl;
+          else if (!trap_inside && page_fault) // handle instruction duplicate
             page_fault = false;
-          }
           /* ------------------------ */
 
           /* Detect sret || mret */
-          if (insn_bits == 0x10200073 || insn_bits == 0x30200073) {
-            // std::cerr << "\033[32m" << "sret / mret" << "\033[0m" << std::endl;
+          if (insn_bits == 0x10200073 || insn_bits == 0x30200073)
             trap_inside--;
-          }
           /* ------------------- */
         }
 
         /* Jump to main function */
-        if (pc == 0x0000000000010178) {
-          // std::cerr << "\033[33m" << "Jump to main!!" << "\033[0m" << std::endl;
+        if (pc == 0x0000000000010178)
           main_inside = true;
-        }
         /* --------------------- */
 
         advance_pc();
@@ -476,21 +461,23 @@ void processor_t::step(size_t n, long long* p_cycle)
     catch(trap_t& t) // trap 발생
     {
       if (main_inside) {
-        // std::cerr << std::endl << "\033[31m" << "<< Trap: "; // for debugging
         trap_inside++;
 
         /* Detect ecall and page fault */
-        // if (t.cause() == 8) // user mode ecall
-          // std::cerr << "ecall >>" << "\033[0m" << std::endl;    // for debugging
+        if (t.cause() == 8) { // user mode ecall
+          if (trap_inside == 1) {
+            if (insn_buf.size() >= 5)
+              insn_buf.pop_back();
+            insn_buf.push_front(0x00000013); // bubble
+            (*p_cycle)++; // treat 'ecall' itself as a single nop
+          }
+        }
 
-        if (t.cause() == 13 || t.cause() == 15) { // page fault by L/S
-          // std::cerr << "Page Fault >>" << "\033[0m" << std::endl; // for debugging
+        else if (t.cause() == 13 || t.cause() == 15)
+        { // page fault by L/S
           if (trap_inside == 1)
             page_fault = true;
         }
-
-        // else
-        //   std::cerr << ">>" << "\033[0m" << std::endl;
         /* --------------------------- */
       }
 
